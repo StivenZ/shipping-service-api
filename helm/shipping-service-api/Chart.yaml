@@ -1,0 +1,11 @@
+apiVersion: v2
+
+name: shipping-service-api
+version: 0.1.0
+description: shipping service API
+home: https://github.com/Valienta/shipping-service-api
+sources:
+  - https://github.com/Valienta/shipping-service-api
+maintainers:
+  - name: Jose Tamura
+    email: tamura@valienta.co

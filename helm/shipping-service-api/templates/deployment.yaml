@@ -1,0 +1,41 @@
+{{ $componentFullName := printf "%s-%s-%s" .Values.app .Values.component .Values.type }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $componentFullName | printf "%s-deployment" | quote }}
+  labels:
+{{ include "basicLabels" . | indent 4 }}
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+{{ include "componentPodSelectors" . | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ include "basicLabels" . | indent 8 }}
+    spec:
+      containers:
+      - name: {{ $componentFullName | printf "%s-container" | quote }}
+        image: {{ .Values.imageName | quote }}
+        ports:
+        - containerPort: {{ .Values.env.PORT }}
+        envFrom:
+        - configMapRef:
+            name: {{ $componentFullName | printf "%s-configmap" | quote }}
+        - secretRef:
+            name: {{ $componentFullName | printf "%s-secret" | quote }}
+        startupProbe:
+          httpGet:
+            path: /api/v1/health/ping
+            port: {{ .Values.env.PORT }}
+          periodSeconds: 1
+          failureThreshold: 5
+      imagePullSecrets:
+        - name: {{ .Values.registryCredentialsName | quote }}

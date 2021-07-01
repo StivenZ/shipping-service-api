@@ -1,0 +1,12 @@
+{{ $componentFullName := printf "%s-%s-%s" .Values.app .Values.component .Values.type }}
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $componentFullName | printf "%s-configmap" | quote }}
+  labels:
+{{ include "basicLabels" . | indent 4 }}
+data:
+{{- range $key, $val := .Values.env }}
+  {{ $key }}: {{ $val | quote }}
+{{- end }}

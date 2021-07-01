@@ -1,0 +1,54 @@
+// Create Order:
+cahsOnDelivery: boolean // ?????
+amountCash: string // ??
+SecurePackage: boolean // ??
+notes: string // package.description?
+deliveryType: string // from payment types and shipment
+packageSize: string //From shipping rates
+amountSecure: number // ??
+sender: Contact
+receiver: Contact
+
+// pricingConsult - shipping rates
+weight: box.weight
+width: box.width
+depth: box.length
+height: box.height
+origin: {
+  pickup: `${sender.street1} ${sender.street2}` // Address
+  country: sender.country
+},
+destination: {
+  destination: `${receiver.street1} ${receiver.street2}` // Address
+  country: receiver.country
+}
+apikey: config._99minutos.apiKey,
+    deliveryType,
+    packageSize,
+    notes: '',
+    cahsOnDelivery,
+    amountCash,
+    SecurePackage,
+    amountSecure,
+    receivedId: '',
+    origin: {
+      sender: sender.name,
+      nameSender: sender.name,
+      lastNameSender: sender.name,
+      emailSender: sender.email,
+      phoneSender: sender.phone,
+      addressOrigin: `${sender.street1} ${sender.street2}`,
+      numberOrigin: sender.indications,
+      codePostalOrigin: sender.postalCode,
+      country: sender.country
+    },
+    destination: {
+      receiver: receiver.name,
+      nameReceiver: receiver.name,
+      lastNameReceiver: receiver.name,
+      emailReceiver: receiver.email,
+      phoneReceiver: receiver.phone,
+      addressDestination: `${receiver.street1} ${receiver.street2}`,
+      numberDestination: receiver.indications,
+      codePostalDestination: receiver.postalCode,
+      country: sender.country

@@ -1,0 +1,17 @@
+{{ $componentFullName := printf "%s-%s-%s" .Values.app .Values.component .Values.type }}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $componentFullName | printf "%s-service" | quote }}
+  labels:
+{{ include "basicLabels" . | indent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: {{ .Values.env.PORT }}
+    protocol: TCP
+    name: http
+  selector:
+{{ include "componentPodSelectors" . | indent 4 }}

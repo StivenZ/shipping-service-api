@@ -1,0 +1,246 @@
+name: build-pipeline
+on:
+  pull_request:
+    branches:
+      - '*'
+  push:
+    branches:
+      - master
+    tags-ignore:
+      - '*' # Pipeline will not run again on Tag stage.
+  
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 # https://github.com/actions/checkout. Fetch current repository.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1 # https://github.com/marketplace/actions/docker-login.  To download images at github docker registry.
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2 # Fetch repository. Saves it in "path".
+        with:
+          repository: Valienta/pipelines-stage-action
+          token: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          path: .github/actions/stage-action
+      - name: Run My Action!
+        uses: ./.github/actions/stage-action
+        with:
+          stage: setup
+          environment: none
+          COMPONENT_VERSION: '0.1'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REGISTRY_CREDENTIALS_NAME: ${{ secrets.REGISTRY_CREDENTIALS_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_LOWER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_LOWER }}
+          GIT_HUB_USERNAME: ValientaDevops
+          GIT_HUB_TOKEN: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Save setup file
+        uses: actions/upload-artifact@v2 # https://github.com/actions/upload-artifact. Share data between jobs.
+        with:
+          name: setup-stage-${{ github.sha }}
+          path: deployment-pipeline-setup.json
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 # Fetch repository.
+      - name: Download setup file
+        uses: actions/download-artifact@v2
+        with:
+          name: setup-stage-${{ github.sha }}
+      - name: Prepare
+        id: prep
+        run: |
+          REPOSITORY_LOWERCASE=$(echo $GITHUB_REPOSITORY | awk '{print tolower($0)}')
+          IMAGE="ghcr.io/${REPOSITORY_LOWERCASE}"
+          TAG=$(echo $GITHUB_SHA | head -c7)
+          NEXT_VERSION=$(jq .BaseConfig.componentNextVersion deployment-pipeline-setup.json | tr -d '"')
+          if [[ -z $GITHUB_BASE_REF && $GITHUB_REF =~ ^refs/heads/(main|master)$ ]] ; then # not pull request (is master/main)
+            echo "not a pull request!"
+            echo ::set-output name=tags::${IMAGE}:${NEXT_VERSION:1},${IMAGE}:latest
+          else
+            echo "pull request!"
+            echo ::set-output name=tags::${IMAGE}:${TAG}
+          fi
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@master
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-single-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-single-buildx
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Build production image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          builder: ${{ steps.buildx.outputs.name }}
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.prep.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          build-args: |
+            NPM_TOKEN=${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+  tag:
+    needs: build
+    runs-on: ubuntu-latest
+    if: contains('refs/heads/main,refs/heads/master', github.ref)
+    steps:
+      - uses: actions/checkout@v2 # Fetch repository.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Download setup file
+        uses: actions/download-artifact@v2
+        with:
+          name: setup-stage-${{ github.sha }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2 # Fetch repository.
+        with:
+          repository: Valienta/pipelines-stage-action
+          token: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          path: .github/actions/stage-action
+      - name: Run My Action
+        uses: ./.github/actions/stage-action
+        with:
+          stage: tag
+          environment: none
+          COMPONENT_VERSION: '0.1'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REGISTRY_CREDENTIALS_NAME: ${{ secrets.REGISTRY_CREDENTIALS_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_LOWER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_LOWER }}
+          GIT_HUB_USERNAME: ValientaDevops
+          GIT_HUB_TOKEN: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+  deploy-development:
+    needs: [build, tag]
+    if: ${{ !failure() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2 # Fetch repository.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Download setup file
+        uses: actions/download-artifact@v2
+        with:
+          name: setup-stage-${{ github.sha }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2 # Fetch repository.
+        with:
+          repository: Valienta/pipelines-stage-action
+          token: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          path: .github/actions/stage-action
+      - name: Pick image tag
+        id: pick-image-tag
+        run: |
+          TAG=$(echo $GITHUB_SHA | head -c7)
+          if [[ -z $GITHUB_BASE_REF && $GITHUB_REF =~ ^refs/heads/(main|master)$ ]] ; then # not pull request (is master/main)
+            echo ::set-output name=tag::""
+          else
+            echo ::set-output name=tag::${TAG}
+          fi
+      - name: Run My Action
+        uses: ./.github/actions/stage-action
+        with:
+          stage: deploy
+          environment: development
+          COMPONENT_VERSION: '0.1'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REGISTRY_CREDENTIALS_NAME: ${{ secrets.REGISTRY_CREDENTIALS_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_LOWER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_LOWER }}
+          GIT_HUB_USERNAME: ValientaDevops
+          GIT_HUB_TOKEN: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          OVERRIDE_IMAGE_TAG: ${{ steps.pick-image-tag.outputs.tag }}
+  deploy-staging:
+    needs: deploy-development
+    runs-on: ubuntu-latest
+    if: contains('refs/heads/main,refs/heads/master', github.ref)
+    steps:
+      - uses: actions/checkout@v2 # Fetch repository.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Download setup file
+        uses: actions/download-artifact@v2
+        with:
+          name: setup-stage-${{ github.sha }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2 # Fetch repository.
+        with:
+          repository: Valienta/pipelines-stage-action
+          token: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          path: .github/actions/stage-action
+      - name: Run My Action
+        uses: ./.github/actions/stage-action
+        with:
+          stage: deploy
+          environment: staging
+          COMPONENT_VERSION: '0.1'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REGISTRY_CREDENTIALS_NAME: ${{ secrets.REGISTRY_CREDENTIALS_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_LOWER }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_LOWER }}
+          GIT_HUB_USERNAME: ValientaDevops
+          GIT_HUB_TOKEN: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+  deploy-prod:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: contains('refs/heads/main,refs/heads/master', github.ref)
+    steps:
+      - uses: actions/checkout@v2 # Fetch repository.
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ValientaDevops
+          password: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+      - name: Download setup file
+        uses: actions/download-artifact@v2
+        with:
+          name: setup-stage-${{ github.sha }}
+      - name: Checkout GitHub Action Repo
+        uses: actions/checkout@v2 # Fetch repository.
+        with:
+          repository: Valienta/pipelines-stage-action
+          token: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}
+          path: .github/actions/stage-action
+      - name: Run My Action
+        uses: ./.github/actions/stage-action
+        with:
+          stage: deploy
+          environment: prod
+          COMPONENT_VERSION: '0.1'
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REGISTRY_CREDENTIALS_NAME: ${{ secrets.REGISTRY_CREDENTIALS_NAME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          GIT_HUB_USERNAME: ValientaDevops
+          GIT_HUB_TOKEN: ${{ secrets.DEVOPS_VALIENTA_PERSONAL_ACCESS_TOKEN }}

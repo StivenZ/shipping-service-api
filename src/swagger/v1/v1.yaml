@@ -1,0 +1,631 @@
+swagger: "2.0"
+info:
+  title: "Billing Service API"
+  description: >
+    Billing service API docs
+  version: "1.0.0"
+basePath: "/api/v1"
+securityDefinitions:
+  HMAC:
+    type: apiKey
+    in: header
+    name: Authorization
+    description: HMAC for the request
+paths:
+  /health/ping:
+    get:
+      summary: "Ping to test if service is up"
+      description: "Will return 204 no content as notification."
+      responses:
+        200:
+          description: "Service is up"
+          schema:
+            $ref: "#/definitions/PingResponse"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Health
+  /back-office/subscriptions/{streamName}/parkedEvents:
+    get:
+      summary: "Get total parked events at Loan Paid Subscription"
+      description: "Will return all the parked events at LoanPaid suscription"
+      parameters:
+        - in: path
+          name: streamName
+          required: true
+          type: string
+      responses:
+        200:
+          description: "Parked events."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Subscriptions
+  /back-office/subscriptions/{streamName}/replayParkedEvents:
+    post:
+      summary: "Replay parked events at Loan Paid Subscription"
+      description: "This command will trigger replay parked events at loan paid subscription."
+      parameters:
+        - in: path
+          name: streamName
+          required: true
+          type: string
+      responses:
+        200:
+          description: "Sucess replay event data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Subscriptions
+  /back-office/voucher:
+    post:
+      summary: "Create voucher"
+      description: "Creates a new voucher"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: voucherCreateRequest
+          required: true
+          description: Data to create a voucher
+          schema:
+            $ref: "#/definitions/CreateVoucherRequest"
+      responses:
+        200:
+          description: "Voucher record successfully created"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+    get:
+      summary: "Get vouchers"
+      description: "Get vouchers"
+      parameters:
+        - in: query
+          name: page
+          type: integer
+          description: Page to get
+        - in: query
+          name: pageSize
+          type: integer
+          description: Page size
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Vouchers data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+  /back-office/voucher/{voucherId}:
+    patch:
+      summary: "Patch voucher"
+      description: "Patch a voucher"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: voucherId
+          required: true
+          type: string
+        - in: body
+          name: voucherPatchRequest
+          required: true
+          description: Data to patch a voucher
+          schema:
+            $ref: "#/definitions/PatchVoucherRequest"
+      responses:
+        200:
+          description: "Voucher successfully patched"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+  /back-office/invoice:
+    post:
+      summary: "Create invoice"
+      description: "Creates a new invoice"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: invoiceCreateRequest
+          required: true
+          description: Data to create an invoice
+          schema:
+            $ref: "#/definitions/CreateInvoiceRequest"
+      responses:
+        200:
+          description: "Invoice created successfully"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+    get:
+      summary: "Get invoices"
+      description: "Get invoices"
+      parameters:
+        - in: query
+          name: orderId
+          type: string
+          description: Get invoice associated with an order id
+        - in: query
+          name: page
+          type: integer
+          description: Page to get
+        - in: query
+          name: pageSize
+          type: integer
+          description: Page size
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Invoice data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+  /back-office/invoice/{invoiceId}:
+    patch:
+      summary: "Patch invoice"
+      description: "Patch an invoice"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          type: string
+        - in: body
+          name: invoicePatchRequest
+          required: true
+          description: Data to patch an invoice
+          schema:
+            $ref: "#/definitions/PatchInvoiceRequest"
+      responses:
+        200:
+          description: "Invoice successfully patched"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+  /back-office/commissionVoucher:
+    post:
+      summary: "Create commissionVoucher"
+      description: "Creates a new commissionVoucher"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: commissionVoucherCreateRequest
+          required: true
+          description: Data to create a commissionVoucher
+          schema:
+            $ref: "#/definitions/CreateCommissionVoucherRequest"
+      responses:
+        200:
+          description: "CommissionVoucher created successfully"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - CommissionVoucher
+    get:
+      summary: "Get CommissionVoucher"
+      description: "Get CommissionVoucher"
+      parameters:
+        - in: query
+          name: orderId
+          type: string
+          description: Get CommissionVoucher associated with an order id
+        - in: query
+          name: page
+          type: integer
+          description: Page to get
+        - in: query
+          name: pageSize
+          type: integer
+          description: Page size
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "CommissionVoucher data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - CommissionVoucher
+  /internal/voucher:
+    post:
+      summary: "Create voucher"
+      description: "Creates a new voucher"
+      security:
+        - HMAC: []
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: voucherCreateRequest
+          required: true
+          description: Data to create a voucher
+          schema:
+            $ref: "#/definitions/CreateVoucherRequest"
+      responses:
+        200:
+          description: "Voucher record successfully created"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+    get:
+      summary: "Get vouchers"
+      description: "Get vouchers"
+      security:
+        - HMAC: []
+      parameters:
+        - in: query
+          name: page
+          type: integer
+          description: Page to get
+        - in: query
+          name: pageSize
+          type: integer
+          description: Page size
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Vouchers data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+  /internal/voucher/{voucherId}:
+    patch:
+      summary: "Patch voucher"
+      description: "Patch a voucher"
+      security:
+        - HMAC: []
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: voucherId
+          required: true
+          type: string
+        - in: body
+          name: voucherPatchRequest
+          required: true
+          description: Data to patch a voucher
+          schema:
+            $ref: "#/definitions/PatchVoucherRequest"
+      responses:
+        200:
+          description: "Voucher successfully patched"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Voucher
+  /internal/invoice:
+    post:
+      summary: "Create invoice"
+      description: "Creates a new invoice"
+      security:
+        - HMAC: []
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: invoiceCreateRequest
+          required: true
+          description: Data to create an invoice
+          schema:
+            $ref: "#/definitions/CreateInvoiceRequest"
+      responses:
+        200:
+          description: "Invoice created successfully"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+    get:
+      summary: "Get invoices"
+      description: "Get invoices"
+      security:
+        - HMAC: []
+      parameters:
+        - in: query
+          name: orderId
+          type: string
+          description: Get invoice associated with an order id
+        - in: query
+          name: page
+          type: integer
+          description: Page to get
+        - in: query
+          name: pageSize
+          type: integer
+          description: Page size
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Invoice data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+  /internal/invoice/{invoiceId}:
+    patch:
+      summary: "Patch invoice"
+      description: "Patch an invoice"
+      security:
+        - HMAC: []
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: path
+          name: invoiceId
+          required: true
+          type: string
+        - in: body
+          name: invoicePatchRequest
+          required: true
+          description: Data to patch an invoice
+          schema:
+            $ref: "#/definitions/PatchInvoiceRequest"
+      responses:
+        200:
+          description: "Invoice successfully patched"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - Invoice
+  /internal/commissionVoucher:
+    post:
+      summary: "Create commissionVoucher"
+      description: "Creates a new commissionVoucher"
+      security:
+        - HMAC: []
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: body
+          name: commissionVoucherCreateRequest
+          required: true
+          description: Data to create a commissionVoucher
+          schema:
+            $ref: "#/definitions/CreateCommissionVoucherRequest"
+      responses:
+        200:
+          description: "CommissionVoucher created successfully"
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - CommissionVoucher
+  /back-office/commissionOperation:
+    get:
+      summary: "Get commissionOperation"
+      description: "Get commissionOperation"
+      parameters:
+        - in: query
+          name: sellerId
+          type: string
+          description: Get commissionOperation associated with a seller
+        - in: query
+          name: fromDate
+          type: string
+          format: date-time
+          description: Intial date
+          required: true
+        - in: query
+          name: toDate
+          type: string
+          description: End date
+          format: date-time
+          required: true
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "CommissionOperation data."
+          schema:
+            $ref: "#/definitions/Response"
+        500:
+          $ref: "#/responses/ApiError"
+      tags:
+        - CommissionOperation
+responses:
+  UnauthorizedError:
+    description: Unauthorized Error
+    schema:
+      $ref: "#/definitions/UnauthorizedError"
+  ApiError:
+    description: Internal Server Error
+    schema:
+      $ref: "#/definitions/ApiError"
+definitions:
+  PingResponse:
+    title: Ping
+    description: Response to check if service is up.
+    type: object
+  Response:
+    title: Response
+    description: Response to endpoint
+  ApiError:
+    title: ApiError
+    description: Error representing a handled error by the API
+    type: object
+    properties:
+      errorCode:
+        type: string
+      message:
+        type: string
+    additionalProperties: false
+    minProperties: 2
+  UnauthorizedError:
+    title: Unauthorized Error
+    description: Error representing unauthorized access
+    type: object
+    properties:
+      message:
+        type: string
+    additionalProperties: false
+    minProperties: 1
+  CreateVoucherRequest:
+    title: Create request
+    description: Body for create request
+    type: object
+    properties:
+      eventId:
+        description: Id of the event associated with this voucher
+        type: string
+        format: uuidv4
+      orderId:
+        description: Id of the order associated with this voucher
+        type: string
+        format: uuidv4
+      amount:
+        description: Amount paid
+        type: number
+        minimum: 0
+      voucherPrefix:
+        description: Prefix of the voucher
+        type: string
+      voucherNumber:
+        description: Voucher number
+        type: integer
+        minimum: 0
+      source:
+        description: Name of the service that originated this voucher.
+        type: string
+        enum:
+          - LOANS-SERVICE-API
+    required: [eventId, orderId, amount, voucherPrefix, voucherNumber, source]
+  PatchVoucherRequest:
+    title: Patch request
+    description: Body for patch request
+    type: object
+    properties:
+      voucherPrefix:
+        description: Prefix of the voucher
+        type: string
+      voucherNumber:
+        description: Voucher number
+        type: integer
+        minimum: 0
+      amount:
+        description: Amount paid
+        type: number
+        minimum: 0
+    minProperties: 1
+  CreateInvoiceRequest:
+    title: Create request
+    description: Body for create request
+    type: object
+    properties:
+      orderId:
+        description: Id of the order associated with this invoice
+        type: string
+        format: uuidv4
+      isReadyForSiigo:
+        description: Is ready for Siigo
+        type: boolean
+    required: [orderId, isReadyForSiigo]
+  PatchInvoiceRequest:
+    title: Patch request
+    description: Body for patch request
+    type: object
+    properties:
+      isReadyForSiigo:
+        description: Is ready for Siigo
+        type: boolean
+    required: [isReadyForSiigo]
+  CreateCommissionVoucherRequest:
+    title: Create request
+    description: Body for create request
+    type: object
+    properties:
+      orderId:
+        description: Id of the order associated with this invoice
+        type: string
+        format: uuidv4
+      amount:
+        description: Amount for voucher
+        type: number
+        minimum: 0
+      voucherPrefix:
+        description: Prefix of the voucher
+        type: string
+      voucherNumber:
+        description: Voucher number
+        type: integer
+        minimum: 0
+    required: [orderId, amount]
